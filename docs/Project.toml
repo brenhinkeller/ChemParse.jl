@@ -1,3 +1,6 @@
 [deps]
 ChemParse = "28a3928a-5b4b-4fb0-b7fc-fe8ab4ccda21"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[compat]
+Documenter = "1.17.0"
