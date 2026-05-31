@@ -1,0 +1,13 @@
+name = "ChemParse"
+uuid = "28a3928a-5b4b-4fb0-b7fc-fe8ab4ccda21"
+authors = ["C. Brenhin Keller <cbkeller@dartmouth.edu> and contributors"]
+version = "0.1"
+
+[compat]
+julia = "1.10.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
