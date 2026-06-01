@@ -27,39 +27,51 @@ module ChemParse
     end
 
     # Input cleaning
-    remove_whitespace(fstr) = replace(fstr, r"\s+"=>"")
-    remove_ions(fstr::AbstractString) = replace(fstr, r"([A-Z][a-z]*)[0-9]*[\+\-]+"=>s"\1")
+    remove_whitespace(fstr::AbstractString) = replace(fstr, r"\s+"=>"")
+    remove_charges(fstr::AbstractString) = replace(fstr, r"([A-Z\)\]][a-z]*)[0-9]*[\+\-]+"=>s"\1")
+    function format_ree(fstr::AbstractString)
+        fstr = replace(fstr, "REE,"=>"La,Ce,Pr,Nd,Sm,Eu,Gd,Tb,Dy,Ho,Er,Tm,Yb,Lu,")
+        fstr = replace(fstr, ",REE"=>",La,Ce,Pr,Nd,Sm,Eu,Gd,Tb,Dy,Ho,Er,Tm,Yb,Lu")
+        fstr = replace(fstr, "REE"=>"(La,Ce,Pr,Nd,Sm,Eu,Gd,Tb,Dy,Ho,Er,Tm,Yb,Lu)")
+        return fstr
+    end
     function format_vacancies(fstr::AbstractString)
         fstr = replace(fstr, "[box]"=>"□")
         fstr = replace(fstr, "[]"=>"□")
         fstr = replace(fstr, "◻"=>"□")
     end
     function sanitize(fstr::AbstractString)
-        # Require matching parentheses and brackets
-        @assert count(isequal('('), fstr) == count(isequal(')'), fstr) "Unmatched parentheses in formula $fstr"
-        @assert count(isequal('['), fstr) == count(isequal(']'), fstr) "Unmatched square brackets in formula $fstr"
-
         # Remove whitespace, if any
         if contains(fstr, ' ') || contains(fstr, '\t')
             fstr = remove_whitespace(fstr)
         end
-        # Remove ions, if any
-        if contains(fstr, '+') || contains(fstr, '-')
-            fstr = remove_ions(fstr)
+        # Deal with vacancies
+        fstr = format_vacancies(fstr)
+        # Deal with "REE", if used as a group
+        if contains(fstr, "REE")
+            fstr = format_ree(fstr)
         end
-
+        # Remove charges, if any
+        if contains(fstr, '+') || contains(fstr, '-')
+            fstr = remove_charges(fstr)
+        end
+        # Remove variable subscripts, if any
+        if contains(fstr, 'x')
+            fstr = replace(fstr, "x"=>"0")
+        end
         return fstr
     end
 
     # Parsing
     function parse_formula(fstr::AbstractString; include_vacancies::Bool=false)
-        # Clean up inputs
+        # Require matching parentheses and brackets
+        @assert count(isequal('('), fstr) == count(isequal(')'), fstr) "Unmatched parentheses in formula $fstr"
+        @assert count(isequal('['), fstr) == count(isequal(']'), fstr) "Unmatched square brackets in formula $fstr"
+
+        # Clean up inputs as much as possible
         fstr = sanitize(fstr)
-        # Deal with vacancies
-        fstr = if include_vacancies
-            format_vacancies(fstr)
-        else
-            replace(fstr, "□"=>"◻")
+        if !include_vacancies
+            fstr = replace(fstr, "□"=>"◻")
         end
         
         # Parse
