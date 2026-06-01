@@ -40,13 +40,19 @@ module ChemParse
         fstr = replace(fstr, "[]"=>"□")
         fstr = replace(fstr, "◻"=>"□")
     end
+    function format_complexes(fstr::AbstractString)
+        fstr = replace(fstr, '·'=>'⋅')
+        fstr = replace(fstr, '•'=>'⋅')
+        fstr = replace(fstr, '*'=>'⋅')
+    end
     function sanitize(fstr::AbstractString)
         # Remove whitespace, if any
         if contains(fstr, ' ') || contains(fstr, '\t')
             fstr = remove_whitespace(fstr)
         end
-        # Deal with vacancies
+        # Standardize notation for vacancies and complexes / multiple salts
         fstr = format_vacancies(fstr)
+        fstr = format_complexes(fstr)
         # Deal with "REE", if used as a group
         if contains(fstr, "REE")
             fstr = format_ree(fstr)
@@ -80,17 +86,29 @@ module ChemParse
 
     # Recursive parsing for all other conditions
     function formula(fstr::AbstractString)
-        if contains(fstr, '·') || contains(fstr, '⋅')
-            # Deal with any bound complexes
-            m = match(r"(?<prefix>^.*)[·⋅]+(?<number>[0-9\.]*)(?<suffix>.*$)", fstr)
+        if contains(fstr, '⋅')
+            # Deal with any bound complexes, starting with the last
+            m = match(r"(?<prefix>^.*)⋅+(?<number>[0-9\.]*)(?<suffix>[^⋅]*$)", fstr)
             number = isempty(m["number"]) ? 1.0 : parse(Float64, m["number"])
+            prefix, suffix = m["prefix"], m["suffix"]
 
-            f = multiply!(formula(m["suffix"]), number)
-            isempty(m["prefix"]) || add!(f, formula(m["prefix"]))
+            f = multiply!(formula(suffix), number)
+            if !isempty(prefix) 
+                if contains(prefix, '⋅')
+                    # Continue recursing
+                    add!(f, formula(prefix))
+                else
+                    # If there are no further complexes, see if first group has a multiplier as well
+                    mp = match(r"(?<number>^[0-9\.]*)(?<group>.*$)", prefix)
+                    number = isempty(mp["number"]) ? 1.0 : parse(Float64, mp["number"])
+                    add!(f, multiply!(formula(mp["group"]), number))
+                end
+            end
             return  f
 
         elseif contains(fstr, '[') && contains(fstr, ']')
-            # Separate out groups in square brackets, requiring balanced brackets for matched group
+            # Separate out groups in square brackets, starting with the first,
+            # and requiring balanced brackets for matched group
             m = match(r"(?<prefix>[^\[]*)\[(?<group>[^\]\[]*(?:\[^\]\[]*(?:\[[^\]\[]*(?:\[[^\]\[]*\][^\]\[]*)*\][^\]\[]*)*\][^\]\[]*)*)\](?<number>[0-9\.]*)(?<suffix>.*$)", fstr)
             number = isempty(m["number"]) ? 1.0 : parse(Float64, m["number"])
 
@@ -100,7 +118,8 @@ module ChemParse
             return f
 
         elseif contains(fstr, '(') && contains(fstr, ')')
-            # Separate out groups in parentheses, requiring balanced parentheses for matched group
+            # Separate out groups in parentheses, starting with the first,
+            # and requiring balanced parentheses for matched group
             m = match(r"(?<prefix>^[^(]*)\((?<group>[^)(]*(?:\([^)(]*(?:\([^)(]*(?:\([^)(]*\)[^)(]*)*\)[^)(]*)*\)[^)(]*)*)\)(?<number>[0-9\.]*)(?<suffix>.*$)", fstr)
             number = isempty(m["number"]) ? 1.0 : parse(Float64, m["number"])
             if contains(m["group"], ',') && !contains(m["group"], '(')
@@ -111,6 +130,7 @@ module ChemParse
             isempty(m["prefix"]) || add!(f, formula(m["prefix"]))
             isempty(m["suffix"]) || add!(f, formula(m["suffix"]))
             return f
+
         else
             # Parse through each posible element
             f = Dict{Symbol,Float64}()
