@@ -13,19 +13,24 @@ using Test
     @test parse_formula("Cs6(Nd,REE,Ca)30(Si70O175)(OH,F,H2O)35") == Dict(:Tb => 1.875, :F => 11.666666666666666, :Cs => 6.0, :Gd => 1.875, :Si => 70.0, :Ca => 1.875, :Ce => 1.875, :Dy => 1.875, :Yb => 1.875, :Ho => 1.875, :Tm => 1.875, :Sm => 1.875, :Lu => 1.875, :La => 1.875, :Pr => 1.875, :Er => 1.875, :H => 35.0, :Eu => 1.875, :Nd => 3.75, :O => 198.33333333333334)
     
     # Examples with vacancies
-    @test parse_formula("[box]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2") == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :Ca => 2.0, :O => 24.0, :Si => 8.0)
-    @test parse_formula("[box]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2", include_vacancies=true) == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :□ => 1.0, :Ca => 2.0, :O => 24.0, :Si => 8.0)
-    @test parse_formula("[]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2") == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :Ca => 2.0, :O => 24.0, :Si => 8.0)
-    @test parse_formula("[]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2", include_vacancies=true) == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :□ => 1.0, :Ca => 2.0, :O => 24.0, :Si => 8.0)
+    fbox = "[box]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2"
+    fbrackets = "[]Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2"
+    fsquare = "□Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2"
+    fmsquare = "◻Ca2(Mg4.5-2.5Fe2+0.5-2.5)Si8O22(OH)2"
+    @test parse_formula(fbox) == parse_formula(fbrackets) == parse_formula(fsquare) == parse_formula(fmsquare) == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :Ca => 2.0, :O => 24.0, :Si => 8.0)
+    @test parse_formula(fbox, include_vacancies=true) == parse_formula(fbrackets, include_vacancies=true) == parse_formula(fsquare, include_vacancies=true) == parse_formula(fmsquare, include_vacancies=true) == Dict(:Fe => 0.5, :H => 2.0, :Mg => 4.5, :□ => 1.0, :Ca => 2.0, :O => 24.0, :Si => 8.0)
 
     # Examples with multiple subunits
-    @test parse_formula("PbO·3Pb(OH)6·6Pb(CO3)") == Dict(:Pb => 10.0, :O => 37.0, :H => 18.0, :C => 6)
-    @test parse_formula("6Pb(CO3)·3Pb(OH)6·PbO") == Dict(:Pb => 10.0, :O => 37.0, :H => 18.0, :C => 6)
+    @test parse_formula("PbO·3Pb(OH)6·6Pb(CO3)") == parse_formula("6Pb(CO3)·3Pb(OH)6·PbO") == Dict(:Pb => 10.0, :O => 37.0, :H => 18.0, :C => 6)
+    @test parse_formula("2PbCO3·Pb(OH)2") == parse_formula("Pb(OH)2 * 2PbCO3") == Dict(:Pb => 3.0, :O => 8.0, :H => 2.0, :C => 2.0)
 
     # Some example organic compounds
     @test parse_formula("CH3COOH") == Dict(:H => 4.0, :O => 2.0, :C => 2.0) # Acetic acid
     @test parse_formula("C5H6N2O2") == Dict(:N => 2.0, :H => 6.0, :O => 2.0, :C => 5.0) # Thymine
     @test parse_formula("C11H12N2O2") == Dict(:N => 2.0, :H => 12.0, :O => 2.0, :C => 11.0) # Tryptophan
+    @test parse_formula("(HC)2(HNC(O)NH)2") == Dict(:N => 4.0, :H => 6.0, :O => 2.0, :C => 4.0) # Glycoluril
+    @test parse_formula("[(3,5-(CF3)2C6H3)4B]−") == Dict(:F => 24.0, :H => 12.0, :C => 32.0, :B => 1.0) # BARF
+    @test parse_formula("(CH3)2CHCH{NHC(O)NH2}2") == Dict(:N => 4.0, :H => 14.0, :O => 2.0, :C => 6.0) # Isobutylidenediurea
 
     # Some example coordination compounds
     @test parse_formula("[Ru((C5H4N)2)3]Cl2·6H2O") == Dict(:Cl => 2.0, :N => 6.0, :Ru => 1.0, :H => 36.0, :O => 6.0, :C => 30.0) # Tris(bipyridine)ruthenium(II) chloride

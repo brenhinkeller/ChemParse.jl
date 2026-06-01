@@ -76,9 +76,7 @@ module ChemParse
 
         # Clean up inputs as much as possible
         fstr = sanitize(fstr)
-        if !include_vacancies
-            fstr = replace(fstr, "□"=>"◻")
-        end
+        include_vacancies || (fstr = replace(fstr, "□"=>"◻")) # not matched       
         
         # Parse
         return formula(fstr)
@@ -105,6 +103,17 @@ module ChemParse
                 end
             end
             return  f
+
+        elseif contains(fstr, '{') && contains(fstr, '}')
+            # Separate out groups in curly braces, starting with the first,
+            # and requiring balanced braces for matched group
+            m = match(r"(?<prefix>[^{]*){(?<group>[^}{]*(?:{^}{]*(?:{[^}{]*(?:{[^}{]*}[^}{]*)*}[^}{]*)*}[^}{]*)*)}(?<number>[0-9\.]*)(?<suffix>.*$)", fstr)
+            number = isempty(m["number"]) ? 1.0 : parse(Float64, m["number"])
+
+            f = multiply!(formula(m["group"]), number)
+            isempty(m["prefix"]) || add!(f, formula(m["prefix"]))
+            isempty(m["suffix"]) || add!(f, formula(m["suffix"]))
+            return f
 
         elseif contains(fstr, '[') && contains(fstr, ']')
             # Separate out groups in square brackets, starting with the first,
